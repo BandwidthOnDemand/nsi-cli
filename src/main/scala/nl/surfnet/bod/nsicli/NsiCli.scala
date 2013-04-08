@@ -1,9 +1,13 @@
 package nl.surfnet.bod.nsicli
 
+import scala.xml.PrettyPrinter
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import scopt.immutable.OptionParser
 import org.joda.time.LocalDateTime
 import org.joda.time.format.DateTimeFormat
 import dispatch._
+import Defaults._
 import model._
 
 object NsiCli {
@@ -49,11 +53,14 @@ object NsiCli {
       case "query" => Query(config)
     }
 
+    val result = Await.result(send(nsiRequest, config), 10 seconds)
+    Console.print(new PrettyPrinter(90, 2).format(result))
+  }
+
+  private def send(nsiRequest: NsiRequest, config: Config) = {
     val request = url(config.endPoint).POST << nsiRequest.envelope.toString
     config.oAuthToken.foreach(t => request.addHeader("Authorization", s"bearer $t"))
-    val response = Http(request OK as.xml.Elem)
-
-    println(response())
+    Http(request OK as.xml.Elem)
   }
 }
 
